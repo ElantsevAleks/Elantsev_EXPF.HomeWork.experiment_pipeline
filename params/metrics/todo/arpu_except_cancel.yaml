@@ -8,7 +8,7 @@ numerator:
 numerator_conditions:
   - condition_field: pg_status
     comparison_sign: not_equal
-    comparison_value: CANCELED
+    comparison_value: CANCELLED
 denominator:
   aggregation_field: user_pseudo_id
   aggregation_function: count_distinct

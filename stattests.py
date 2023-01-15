@@ -2,7 +2,8 @@ import pandas as pd
 import numpy as np
 import abc
 
-from scipy.stats import ttest_ind_from_stats, ttest_ind
+from scipy.stats import ttest_ind_from_stats, ttest_ind, mannwhitneyu
+from statsmodels.stats.proportion import proportions_ztest
 
 import config as cfg
 
@@ -73,6 +74,38 @@ class TTestFromStats(Estimator):
             cfg.logger.error(e)
             statistic, pvalue = None, None
 
+        return EstimatorCriteriaValues(pvalue, statistic)
+
+
+class MannWhitneyU(Estimator):
+
+    def __call__(self, stat: Statistics) -> EstimatorCriteriaValues:
+        try:
+            statistic, pvalue = mannwhitneyu(
+                x=None,     # TODO
+                y=None,     # TODO
+                alternative='two-sided'
+            )
+        except Exception as e:
+            cfg.logger.error(e)
+            statistic, pvalue = None, None
+        
+        return EstimatorCriteriaValues(pvalue, statistic)
+
+
+class Proportions_ZTest(Estimator):
+
+    def __call__(self, stat: Statistics) -> EstimatorCriteriaValues:
+        try:
+            statistic, pvalue = proportions_ztest(
+                count=[stat.n_0 * stat.mean_0, stat.n_1 * stat.mean_1],
+                nobs=[stat.n_0, stat.n_1],
+                alternative='two-sided'
+            )
+        except Exception as e:
+            cfg.logger.error(e)
+            statistic, pvalue = None, None
+        
         return EstimatorCriteriaValues(pvalue, statistic)
 
 

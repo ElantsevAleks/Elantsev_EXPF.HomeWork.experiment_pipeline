@@ -5,7 +5,7 @@ import utils
 import config as cfg
 from itertools import product
 from metric_builder import Metric, CalculateMetric
-from stattests import TTestFromStats, calculate_statistics, calculate_linearization
+from stattests import TTestFromStats, calculate_statistics, calculate_linearization, MannWhitneyU, Proportions_ZTest
 
 
 class Report:
@@ -15,12 +15,18 @@ class Report:
 
 class BuildMetricReport:
     def __call__(self, calculated_metric, metric_items) -> Report:
-        ttest = TTestFromStats()
+        statistical_tests = {
+            "t_test": TTestFromStats,
+            "mann_whitney": MannWhitneyU,
+            "prop_test": Proportions_ZTest
+        }
+
+        estimator = statistical_tests[metric_items.estimator]()
         cfg.logger.info(f"{metric_items.name}")
 
-        df_ = calculate_linearization(calculated_metric)
+        df_ = calculate_linearization(calculated_metric)        # TODO Нужна линеаризация для всех критериев?
         stats = calculate_statistics(df_, metric_items.type)
-        criteria_res = ttest(stats)
+        criteria_res = estimator(stats)
 
         report_items = pd.DataFrame({
             "metric_name": metric_items.name,

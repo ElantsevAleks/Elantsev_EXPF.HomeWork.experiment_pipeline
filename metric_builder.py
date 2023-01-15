@@ -19,6 +19,10 @@ def _load_yaml_preset(preset="default"):
 
 class Metric:
     def __init__(self, metric_config):
+        comparison_signs = {
+            "not_equal": "!=",
+            "equal": "=="
+        }
         self.name = metric_config.get("name", config.DEFAULT_VALUE)
         self.type = metric_config.get("type", config.DEFAULT_METRIC_TYPE)
         self.level = metric_config.get("level", config.DEFAULT_UNIT_LEVEL)
@@ -31,6 +35,22 @@ class Metric:
         denominator_aggregation_function = self.denominator.get("aggregation_function", config.DEFAULT_VALUE)
         self.numerator_aggregation_function = self._map_aggregation_function(numerator_aggregation_function)
         self.denominator_aggregation_function = self._map_aggregation_function(denominator_aggregation_function)
+        # TODO self.numerator_conditions c несколькими условиями
+        numerator_conditions = metric_config.get("numerator_conditions", None)
+        if numerator_conditions:
+            numerator_conditions = numerator_conditions[0]
+            numerator_condition_str = f"{numerator_conditions['condition_field']} {comparison_signs[numerator_conditions['comparison_sign']]} '{numerator_conditions['comparison_value']}'"
+            self.numerator_conditions = numerator_condition_str
+        else: 
+            self.numerator_conditions = None
+        # TODO self.denominator_conditions  c несколькими условиями
+        denominator_conditions = metric_config.get("denominator_conditions", None)
+        if denominator_conditions:
+            denominator_conditions = denominator_conditions[0]
+            denominator_condition_str = f"{denominator_conditions['condition_field']} {comparison_signs[denominator_conditions['comparison_sign']]} '{denominator_conditions['comparison_value']}'"
+            self.denominator_conditions = denominator_condition_str
+        else:
+            self.denominator_conditions = None
 
     @staticmethod
     def _map_aggregation_function(aggregation_function):
@@ -52,12 +72,37 @@ class CalculateMetric:
         self.metric = metric
 
     def __call__(self, df):
-        return df.groupby([config.VARIANT_COL, self.metric.level]).apply(
-            lambda df: pd.Series({
-                "num": self.metric.numerator_aggregation_function(df[self.metric.numerator_aggregation_field]),
-                "den": self.metric.denominator_aggregation_function(df[self.metric.denominator_aggregation_field]),
-                "n": pd.Series.nunique(df[self.metric.level])
-            })
-        ).reset_index()
-
-
+        # Conditions aggregation added
+        # Медленный монстр, но пока так
+        if self.metric.numerator_conditions and self.metric.denominator_conditions:
+            return df.groupby([config.VARIANT_COL, self.metric.level]).apply(
+                lambda df: pd.Series({
+                    "num": self.metric.numerator_aggregation_function(df.query(self.metric.numerator_conditions)[self.metric.numerator_aggregation_field]),
+                    "den": self.metric.denominator_aggregation_function(df.query(self.metric.denominator_conditions)[self.metric.denominator_aggregation_field]),
+                    "n": pd.Series.nunique(df[self.metric.level])
+                })
+            ).reset_index()
+        elif self.metric.numerator_conditions and not self.metric.denominator_conditions:
+            return df.groupby([config.VARIANT_COL, self.metric.level]).apply(
+                lambda df: pd.Series({
+                    "num": self.metric.numerator_aggregation_function(df.query(self.metric.numerator_conditions)[self.metric.numerator_aggregation_field]),
+                    "den": self.metric.denominator_aggregation_function(df[self.metric.denominator_aggregation_field]),
+                    "n": pd.Series.nunique(df[self.metric.level])
+                })
+            ).reset_index()
+        elif self.metric.denominator_conditions:
+            return df.groupby([config.VARIANT_COL, self.metric.level]).apply(
+                lambda df: pd.Series({
+                    "num": self.metric.numerator_aggregation_function(df[self.metric.numerator_aggregation_field]),
+                    "den": self.metric.denominator_aggregation_function(df.query(self.metric.denominator_conditions)[self.metric.denominator_aggregation_field]),
+                    "n": pd.Series.nunique(df[self.metric.level])
+                })
+            ).reset_index()
+        else:
+            return df.groupby([config.VARIANT_COL, self.metric.level]).apply(
+                lambda df: pd.Series({
+                    "num": self.metric.numerator_aggregation_function(df[self.metric.numerator_aggregation_field]),
+                    "den": self.metric.denominator_aggregation_function(df[self.metric.denominator_aggregation_field]),
+                    "n": pd.Series.nunique(df[self.metric.level])
+                })
+            ).reset_index()
