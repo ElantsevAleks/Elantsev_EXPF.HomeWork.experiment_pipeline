@@ -15,13 +15,15 @@ class EstimatorCriteriaValues:
 
 
 class Statistics:
-    def __init__(self, mean_0: float, mean_1: float, var_0: float, var_1: float, n_0: int, n_1: int):
+    def __init__(self, mean_0: float, mean_1: float, var_0: float, var_1: float, n_0: int, n_1: int, arr_0=None, arr_1=None):
         self.mean_0 = mean_0
         self.mean_1 = mean_1
         self.var_0 = var_0
         self.var_1 = var_1
         self.n_0 = n_0
         self.n_1 = n_1
+        self.arr_0 = arr_0
+        self.arr_1 = arr_1
 
 
 class MetricStats(abc.ABC):
@@ -38,15 +40,17 @@ class Estimator(abc.ABC):
 
 class BaseStatsRatio(MetricStats):
     def __call__(self, df) -> Statistics:
-        _unique_variants = df[cfg.VARIANT_COL].unique()
+        _unique_variants = df[cfg.VARIANT_COL].unique()     # TODO работа с "активной парой"
         n_0 = sum(df['n'][df[cfg.VARIANT_COL] == _unique_variants[0]])
         n_1 = sum(df['n'][df[cfg.VARIANT_COL] == _unique_variants[1]])
         mean_0 = sum(df['num'][df[cfg.VARIANT_COL] == _unique_variants[0]]) / sum(df['den'][df[cfg.VARIANT_COL] == _unique_variants[0]])
         mean_1 = sum(df['num'][df[cfg.VARIANT_COL] == _unique_variants[1]]) / sum(df['den'][df[cfg.VARIANT_COL] == _unique_variants[1]])
         var_0 = df['l_ratio'][df[cfg.VARIANT_COL] == _unique_variants[0]].var()
         var_1 = df['l_ratio'][df[cfg.VARIANT_COL] == _unique_variants[1]].var()
+        arr_0 = None    # TODO
+        arr_1 = None    # TODO
 
-        return Statistics(mean_0, mean_1, var_0, var_1, n_0, n_1)
+        return Statistics(mean_0, mean_1, var_0, var_1, n_0, n_1, arr_0, arr_1)
 
 
 class Linearization():
@@ -82,8 +86,8 @@ class MannWhitneyU(Estimator):
     def __call__(self, stat: Statistics) -> EstimatorCriteriaValues:
         try:
             statistic, pvalue = mannwhitneyu(
-                x=None,     # TODO
-                y=None,     # TODO
+                x=stat.arr_0,
+                y=stat.arr_1,
                 alternative='two-sided'
             )
         except Exception as e:
@@ -121,9 +125,15 @@ def calculate_statistics(df, type):
 
 
 def calculate_linearization(df):
+    # TODO В идеале, определение списка _variants и определения "активной пары" должно происходить до функции
+    # А внутри этой функции _variants представляет собой "активную пару", для которой рассчитывается стат.критерий
     _variants = df[cfg.VARIANT_COL].unique()
     linearization = Linearization()
 
+    # TODO В идеале, уже здесь работа должна вестись исключительно с выбранной парой вариантв
+    # Сейчас происходит "заскакивание" в зону других вариантов
+    # Плюс, функция вносит корректировки в исходный df, что делает излишним return
+    # (???) Необходимо внутри функции работать с копией исходного df(???)
     df['l_ratio'] = 0
     if (df['den'] == df['n']).all():
         df.loc[df[cfg.VARIANT_COL] == _variants[0], 'l_ratio'] = df.loc[df[cfg.VARIANT_COL] == _variants[0], 'num']

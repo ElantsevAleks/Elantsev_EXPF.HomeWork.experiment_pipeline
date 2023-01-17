@@ -47,6 +47,7 @@ def build_experiment_report(df, metric_config):
     build_metric_report = BuildMetricReport()
     reports = []
 
+    # TODO Добавить фукционал определения "активной пары" - конкретной пары экспериментов, для которой вычисляется метрика
     for metric_params in metric_config:
         metric_parsed = Metric(metric_params)
         calculated_metric = CalculateMetric(metric_parsed)(df)
