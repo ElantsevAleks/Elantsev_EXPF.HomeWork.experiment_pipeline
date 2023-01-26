@@ -5,10 +5,10 @@ level: user_pseudo_id
 numerator:
   aggregation_field: order_id
   aggregation_function: count_distinct
-  numerator_conditions:
-    - condition_field: pg_status
-      comparison_sign: not_equal
-      comparison_value: CANCELLED
+numerator_conditions:
+  - condition_field: pg_status
+    comparison_sign: not_equal
+    comparison_value: CANCELLED
 denominator:
   aggregation_field: order_id
   aggregation_function: count_distinct

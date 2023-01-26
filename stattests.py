@@ -47,8 +47,8 @@ class BaseStatsRatio(MetricStats):
         mean_1 = sum(df['num'][df[cfg.VARIANT_COL] == _unique_variants[1]]) / sum(df['den'][df[cfg.VARIANT_COL] == _unique_variants[1]])
         var_0 = df['l_ratio'][df[cfg.VARIANT_COL] == _unique_variants[0]].var()
         var_1 = df['l_ratio'][df[cfg.VARIANT_COL] == _unique_variants[1]].var()
-        arr_0 = None    # TODO
-        arr_1 = None    # TODO
+        arr_0 = df['num'][df[cfg.VARIANT_COL] == _unique_variants[0]] / df['den'][df[cfg.VARIANT_COL] == _unique_variants[0]]
+        arr_1 = df['num'][df[cfg.VARIANT_COL] == _unique_variants[1]] / df['den'][df[cfg.VARIANT_COL] == _unique_variants[1]]
 
         return Statistics(mean_0, mean_1, var_0, var_1, n_0, n_1, arr_0, arr_1)
 
